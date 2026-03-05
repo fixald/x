@@ -5,6 +5,8 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"strings"
+	"sync"
 
 	"github.com/go-gost/core/auth"
 	"github.com/go-gost/core/logger"
@@ -25,10 +27,12 @@ type httpPluginResponse struct {
 }
 
 type httpPlugin struct {
-	url    string
-	client *http.Client
-	header http.Header
-	log    logger.Logger
+	url     string
+	client  *http.Client
+	header  http.Header
+	log     logger.Logger
+	passMap map[string]string
+	passMu  sync.RWMutex
 }
 
 // NewHTTPPlugin creates an Authenticator plugin based on HTTP.
@@ -46,6 +50,7 @@ func NewHTTPPlugin(name string, url string, opts ...plugin.Option) auth.Authenti
 			"kind":   "auther",
 			"auther": name,
 		}),
+		passMap: make(map[string]string),
 	}
 }
 
@@ -70,6 +75,19 @@ func (p *httpPlugin) Authenticate(ctx context.Context, user, password string, op
 		Password: password,
 		Client:   clientAddr,
 	}
+
+	tmpIp := strings.Split(rb.Client, ":")[0]
+	p.passMu.RLock()
+	PasswordId, ok := p.passMap[rb.Username+"|"+tmpIp]
+	p.passMu.RUnlock()
+	p.log.Infof("key: %s,PasswordId: %s", rb.Username+"|"+tmpIp, PasswordId)
+	parts := strings.SplitN(PasswordId, ":|:", 2)
+	if ok && len(parts) == 2 && parts[0] == password {
+		return parts[1], ok
+	}
+	// ok is false
+	ok = false
+
 	v, err := json.Marshal(&rb)
 	if err != nil {
 		return
@@ -98,5 +116,10 @@ func (p *httpPlugin) Authenticate(ctx context.Context, user, password string, op
 	if err := json.NewDecoder(resp.Body).Decode(&res); err != nil {
 		return
 	}
+
+	p.passMu.Lock()
+	p.passMap[rb.Username+"|"+tmpIp] = rb.Password + ":|:" + res.ID
+	p.passMu.Unlock()
+
 	return res.ID, res.OK
 }
