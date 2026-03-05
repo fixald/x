@@ -287,6 +287,22 @@ func (h *httpHandler) handleRequest(ctx context.Context, conn net.Conn, req *htt
 	if !ok {
 		return errors.New("authentication failed")
 	}
+	// 无 auther 时可能得到空 clientID，用 context（admission 设置的 ID）或来源地址兜底，保证 observer 有 client 字段
+	if clientID == "" {
+		clientID = string(xctx.ClientIDFromContext(ctx))
+	}
+	if clientID == "" {
+		if srcAddr := xctx.SrcAddrFromContext(ctx); srcAddr != nil {
+			if h, _, _ := net.SplitHostPort(srcAddr.String()); h != "" {
+				clientID = h
+			} else {
+				clientID = srcAddr.String()
+			}
+		}
+	}
+	if clientID == "" {
+		clientID = conn.RemoteAddr().String()
+	}
 
 	log = log.WithFields(map[string]any{"clientID": clientID})
 	ro.ClientID = clientID
@@ -857,6 +873,13 @@ func (h *httpHandler) basicProxyAuth(proxyAuth string) (username, password strin
 func (h *httpHandler) authenticate(ctx context.Context, conn net.Conn, req *http.Request, resp *http.Response, log logger.Logger) (id string, ok bool) {
 	u, p, _ := h.basicProxyAuth(req.Header.Get("Proxy-Authorization"))
 	if h.options.Auther == nil {
+		// 如果没有 auther，尝试从 context 获取 admission ID
+		admissionID := xctx.ClientIDFromContext(ctx)
+		if admissionID != "" {
+			log.Debugf("authenticate: no auther, use admission id as client id: %s", admissionID)
+			return string(admissionID), true
+		}
+		log.Debugf("authenticate: no auther and no admission id, returning empty client id")
 		return "", true
 	}
 	if id, ok = h.options.Auther.Authenticate(ctx, u, p, auth.WithService(h.options.Service)); ok {

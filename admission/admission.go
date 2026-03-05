@@ -300,3 +300,18 @@ func (p *admissionGroup) Admit(ctx context.Context, addr string, opts ...admissi
 	}
 	return true
 }
+
+// GetID 从第一个实现 GetID 且返回非空的 admission 获取 ID，供 service 写入 context 作为 client
+func (p *admissionGroup) GetID(addr string) string {
+	for _, a := range p.admissions {
+		if a == nil {
+			continue
+		}
+		if getter, ok := a.(interface{ GetID(string) string }); ok {
+			if id := getter.GetID(addr); id != "" {
+				return id
+			}
+		}
+	}
+	return ""
+}

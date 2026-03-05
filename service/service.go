@@ -246,13 +246,28 @@ func (s *defaultService) Serve() error {
 				break
 			}
 		}
-		if s.options.admission != nil &&
-			!s.options.admission.Admit(ctx, srcAddr.String(), admission.WithService(s.name)) {
-			conn.Close()
-			log.Debugf("admission: %s is denied", srcAddr)
-			continue
+		if s.options.admission != nil {
+			if !s.options.admission.Admit(ctx, srcAddr.String(), admission.WithService(s.name)) {
+				conn.Close()
+				log.Debugf("admission: %s is denied", srcAddr)
+				continue
+			}
+			// 如果 Admission 插件返回了 ID，则写入 context，供后续 handler 级别统计作为 client 使用
+			if getter, ok := s.options.admission.(interface{ GetID(string) string }); ok {
+				log.Debugf("admission: GetID interface found, calling GetID for %s", srcAddr.String())
+				admissionID := getter.GetID(srcAddr.String())
+				if admissionID == "" {
+					admissionID = clientIP // 回退为来源 IP，保证 handler 级别有 client
+					log.Debugf("admission: no ID returned, using clientIP as fallback: %s", clientIP)
+				} else {
+					log.Debugf("admission: ID retrieved from plugin: %s", admissionID)
+				}
+				log.Debugf("admission client id resolved, addr=%s id=%s", srcAddr.String(), admissionID)
+				ctx = xctx.ContextWithClientID(ctx, xctx.ClientID(admissionID))
+			} else {
+				log.Debugf("admission: GetID interface not found, admission type: %T", s.options.admission)
+			}
 		}
-
 		wg.Add(1)
 
 		go func() {

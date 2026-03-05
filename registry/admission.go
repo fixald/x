@@ -37,3 +37,15 @@ func (w *admissionWrapper) Admit(ctx context.Context, addr string, opts ...admis
 	}
 	return p.Admit(ctx, addr, opts...)
 }
+
+// GetID allows upstream callers to retrieve an ID from the underlying admission plugin (if supported).
+func (w *admissionWrapper) GetID(addr string) string {
+	p := w.r.get(w.name)
+	if p == nil {
+		return ""
+	}
+	if getter, ok := p.(interface{ GetID(string) string }); ok {
+		return getter.GetID(addr)
+	}
+	return ""
+}
