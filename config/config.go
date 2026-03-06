@@ -77,6 +77,9 @@ type LogRotationConfig struct {
 	// Compress determines if the rotated log files should be compressed
 	// using gzip. The default is not to perform compression.
 	Compress bool `yaml:"compress,omitempty" json:"compress,omitempty"`
+	// Interval enables time-based rotation, e.g. "hourly" or "1h" for one file per hour.
+	// When set, log files are named with timestamp: base.2006010215.log (e.g. 2026030711)
+	Interval string `yaml:"interval,omitempty" json:"interval,omitempty"`
 }
 
 type LoggerConfig struct {

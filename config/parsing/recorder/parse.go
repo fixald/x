@@ -7,6 +7,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
+	"time"
 
 	"github.com/go-gost/core/logger"
 	"github.com/go-gost/core/recorder"
@@ -54,7 +56,9 @@ func ParseRecorder(cfg *config.RecorderConfig) (r recorder.Recorder) {
 	if cfg.File != nil && cfg.File.Path != "" {
 		var out io.WriteCloser = discardCloser{}
 
-		if cfg.File.Rotation != nil {
+		if cfg.File.Rotation != nil && (cfg.File.Rotation.Interval == "hourly" || cfg.File.Rotation.Interval == "1h") {
+			out = newHourlyWriteCloser(cfg.File.Path, cfg.File.Rotation.LocalTime)
+		} else if cfg.File.Rotation != nil {
 			out = &lumberjack.Logger{
 				Filename:   cfg.File.Path,
 				MaxSize:    cfg.File.Rotation.MaxSize,
@@ -130,4 +134,89 @@ func ParseRecorder(cfg *config.RecorderConfig) (r recorder.Recorder) {
 	}
 
 	return
+}
+
+// hourlyWriteCloser 按小时轮转，实现 io.WriteCloser，供 file recorder 使用
+type hourlyWriteCloser struct {
+	basePath  string
+	ext       string
+	localTime bool
+	mu        sync.Mutex
+	file      *os.File
+	rotateAt  time.Time
+}
+
+func newHourlyWriteCloser(path string, localTime bool) io.WriteCloser {
+	dir := filepath.Dir(path)
+	os.MkdirAll(dir, 0755)
+	base := filepath.Base(path)
+	ext := filepath.Ext(base)
+	if ext == "" {
+		ext = ".log"
+	}
+	baseName := base[:len(base)-len(ext)]
+	basePath := filepath.Join(dir, baseName)
+	w := &hourlyWriteCloser{
+		basePath:  basePath,
+		ext:       ext,
+		localTime: localTime,
+	}
+	w.rotateLocked()
+	return w
+}
+
+func (w *hourlyWriteCloser) filename(t time.Time) string {
+	if w.localTime {
+		t = t.Local()
+	}
+	return w.basePath + "." + t.Format("2006010215") + w.ext
+}
+
+func (w *hourlyWriteCloser) rotateLocked() {
+	now := time.Now()
+	if w.localTime {
+		now = now.Local()
+	}
+	slot := time.Date(now.Year(), now.Month(), now.Day(), now.Hour(), 0, 0, 0, now.Location())
+	w.rotateAt = slot
+	fpath := w.filename(now)
+	f, err := os.OpenFile(fpath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+	if err != nil {
+		if logger.Default() != nil {
+			logger.Default().Warn(err)
+		}
+		return
+	}
+	if w.file != nil {
+		w.file.Close()
+	}
+	w.file = f
+}
+
+func (w *hourlyWriteCloser) Write(p []byte) (n int, err error) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	now := time.Now()
+	if w.localTime {
+		now = now.Local()
+	}
+	slot := time.Date(now.Year(), now.Month(), now.Day(), now.Hour(), 0, 0, 0, now.Location())
+	if slot != w.rotateAt || w.file == nil {
+		w.rotateLocked()
+	}
+	if w.file == nil {
+		return 0, nil
+	}
+	return w.file.Write(p)
+}
+
+func (w *hourlyWriteCloser) Close() error {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	if w.file != nil {
+		err := w.file.Close()
+		w.file = nil
+		return err
+	}
+	return nil
 }
