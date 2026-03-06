@@ -217,21 +217,21 @@ func (h *http2Handler) roundTrip(ctx context.Context, w http.ResponseWriter, req
 		Body:       io.NopCloser(bytes.NewReader([]byte{})),
 	}
 
-	ro.HTTP = &xrecorder.HTTPRecorderObject{
-		Host:   req.Host,
-		Proto:  req.Proto,
-		Scheme: req.URL.Scheme,
-		Method: req.Method,
-		URI:    req.RequestURI,
-		Request: xrecorder.HTTPRequestRecorderObject{
-			ContentLength: req.ContentLength,
-			Header:        req.Header.Clone(),
-		},
-	}
-	defer func() {
-		ro.HTTP.StatusCode = resp.StatusCode
-		ro.HTTP.Response.Header = resp.Header
-	}()
+	// ro.HTTP = &xrecorder.HTTPRecorderObject{
+	// 	Host:   req.Host,
+	// 	Proto:  req.Proto,
+	// 	Scheme: req.URL.Scheme,
+	// 	Method: req.Method,
+	// 	URI:    req.RequestURI,
+	// 	Request: xrecorder.HTTPRequestRecorderObject{
+	// 		ContentLength: req.ContentLength,
+	// 		Header:        req.Header.Clone(),
+	// 	},
+	// }
+	// defer func() {
+	// 	ro.HTTP.StatusCode = resp.StatusCode
+	// 	ro.HTTP.Response.Header = resp.Header
+	// }()
 
 	clientID, ok := h.authenticate(ctx, w, req, resp, log)
 	if !ok {

@@ -144,17 +144,17 @@ func (h *Sniffer) HandleHTTP(ctx context.Context, network string, conn net.Conn,
 	}
 
 	ro := ho.recorderObject
-	ro.HTTP = &xrecorder.HTTPRecorderObject{
-		Host:   req.Host,
-		Proto:  req.Proto,
-		Scheme: req.URL.Scheme,
-		Method: req.Method,
-		URI:    req.RequestURI,
-		Request: xrecorder.HTTPRequestRecorderObject{
-			ContentLength: req.ContentLength,
-			Header:        req.Header.Clone(),
-		},
-	}
+	// ro.HTTP = &xrecorder.HTTPRecorderObject{
+	// 	Host:   req.Host,
+	// 	Proto:  req.Proto,
+	// 	Scheme: req.URL.Scheme,
+	// 	Method: req.Method,
+	// 	URI:    req.RequestURI,
+	// 	Request: xrecorder.HTTPRequestRecorderObject{
+	// 		ContentLength: req.ContentLength,
+	// 		Header:        req.Header.Clone(),
+	// 	},
+	// }
 
 	if clientIP := xhttp.GetClientIP(req); clientIP != nil {
 		ro.ClientIP = clientIP.String()
@@ -304,17 +304,17 @@ func (h *Sniffer) httpRoundTrip(ctx context.Context, rw, cc io.ReadWriteCloser, 
 		}).Infof("%s >-< %s", ro.RemoteAddr, req.Host)
 	}()
 
-	ro.HTTP = &xrecorder.HTTPRecorderObject{
-		Host:   req.Host,
-		Proto:  req.Proto,
-		Scheme: req.URL.Scheme,
-		Method: req.Method,
-		URI:    req.RequestURI,
-		Request: xrecorder.HTTPRequestRecorderObject{
-			ContentLength: req.ContentLength,
-			Header:        req.Header.Clone(),
-		},
-	}
+	// ro.HTTP = &xrecorder.HTTPRecorderObject{
+	// 	Host:   req.Host,
+	// 	Proto:  req.Proto,
+	// 	Scheme: req.URL.Scheme,
+	// 	Method: req.Method,
+	// 	URI:    req.RequestURI,
+	// 	Request: xrecorder.HTTPRequestRecorderObject{
+	// 		ContentLength: req.ContentLength,
+	// 		Header:        req.Header.Clone(),
+	// 	},
+	// }
 
 	// HTTP/1.0
 	if req.ProtoMajor == 1 && req.ProtoMinor == 0 {
@@ -342,10 +342,10 @@ func (h *Sniffer) httpRoundTrip(ctx context.Context, rw, cc io.ReadWriteCloser, 
 
 	err = req.Write(cc)
 
-	if reqBody != nil {
-		ro.HTTP.Request.Body = reqBody.Content()
-		ro.HTTP.Request.ContentLength = reqBody.Length()
-	}
+	// if reqBody != nil {
+	// 	ro.HTTP.Request.Body = reqBody.Content()
+	// 	ro.HTTP.Request.ContentLength = reqBody.Length()
+	// }
 
 	if err != nil {
 		return
@@ -371,9 +371,9 @@ func (h *Sniffer) httpRoundTrip(ctx context.Context, rw, cc io.ReadWriteCloser, 
 	defer resp.Body.Close()
 	xio.SetReadDeadline(cc, time.Time{})
 
-	ro.HTTP.StatusCode = resp.StatusCode
-	ro.HTTP.Response.Header = resp.Header
-	ro.HTTP.Response.ContentLength = resp.ContentLength
+	// ro.HTTP.StatusCode = resp.StatusCode
+	// ro.HTTP.Response.Header = resp.Header
+	// ro.HTTP.Response.ContentLength = resp.ContentLength
 
 	if log.IsLevelEnabled(logger.TraceLevel) {
 		dump, _ := httputil.DumpResponse(resp, false)
@@ -409,10 +409,10 @@ func (h *Sniffer) httpRoundTrip(ctx context.Context, rw, cc io.ReadWriteCloser, 
 
 	err = resp.Write(rw)
 
-	if respBody != nil {
-		ro.HTTP.Response.Body = respBody.Content()
-		ro.HTTP.Response.ContentLength = respBody.Length()
-	}
+	// if respBody != nil {
+	// 	ro.HTTP.Response.Body = respBody.Content()
+	// 	ro.HTTP.Response.ContentLength = respBody.Length()
+	// }
 
 	if err != nil {
 		err = fmt.Errorf("write response: %w", err)
@@ -817,17 +817,17 @@ func (h *h2Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if clientIP := xhttp.GetClientIP(r); clientIP != nil {
 		ro.ClientIP = clientIP.String()
 	}
-	ro.HTTP = &xrecorder.HTTPRecorderObject{
-		Host:   r.Host,
-		Proto:  r.Proto,
-		Scheme: "https",
-		Method: r.Method,
-		URI:    r.RequestURI,
-		Request: xrecorder.HTTPRequestRecorderObject{
-			ContentLength: r.ContentLength,
-			Header:        r.Header.Clone(),
-		},
-	}
+	// ro.HTTP = &xrecorder.HTTPRecorderObject{
+	// 	Host:   r.Host,
+	// 	Proto:  r.Proto,
+	// 	Scheme: "https",
+	// 	Method: r.Method,
+	// 	URI:    r.RequestURI,
+	// 	Request: xrecorder.HTTPRequestRecorderObject{
+	// 		ContentLength: r.ContentLength,
+	// 		Header:        r.Header.Clone(),
+	// 	},
+	// }
 
 	if log.IsLevelEnabled(logger.TraceLevel) {
 		dump, _ := httputil.DumpRequest(r, false)
@@ -864,10 +864,10 @@ func (h *h2Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	resp, err := h.transport.RoundTrip(req.WithContext(r.Context()))
-	if reqBody != nil {
-		ro.HTTP.Request.Body = reqBody.Content()
-		ro.HTTP.Request.ContentLength = reqBody.Length()
-	}
+	// if reqBody != nil {
+	// 	ro.HTTP.Request.Body = reqBody.Content()
+	// 	ro.HTTP.Request.ContentLength = reqBody.Length()
+	// }
 	if err != nil {
 		log.Error(err)
 		w.WriteHeader(http.StatusServiceUnavailable)
@@ -875,9 +875,9 @@ func (h *h2Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	defer resp.Body.Close()
 
-	ro.HTTP.StatusCode = resp.StatusCode
-	ro.HTTP.Response.Header = resp.Header
-	ro.HTTP.Response.ContentLength = resp.ContentLength
+	// ro.HTTP.StatusCode = resp.StatusCode
+	// ro.HTTP.Response.Header = resp.Header
+	// ro.HTTP.Response.ContentLength = resp.ContentLength
 
 	if log.IsLevelEnabled(logger.TraceLevel) {
 		dump, _ := httputil.DumpResponse(resp, false)
@@ -902,10 +902,10 @@ func (h *h2Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	io.Copy(w, resp.Body)
 
-	if respBody != nil {
-		ro.HTTP.Response.Body = respBody.Content()
-		ro.HTTP.Response.ContentLength = respBody.Length()
-	}
+	// if respBody != nil {
+	// 	ro.HTTP.Response.Body = respBody.Content()
+	// 	ro.HTTP.Response.ContentLength = respBody.Length()
+	// }
 }
 
 func (h *h2Handler) setHeader(w http.ResponseWriter, header http.Header) {

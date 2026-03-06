@@ -98,17 +98,17 @@ func (h *fileHandler) handleFunc(w http.ResponseWriter, r *http.Request) {
 		Network:    "tcp",
 		Host:       r.Host,
 		Proto:      "http",
-		HTTP: &xrecorder.HTTPRecorderObject{
-			Host:   r.Host,
-			Method: r.Method,
-			Proto:  r.Proto,
-			Scheme: r.URL.Scheme,
-			URI:    r.RequestURI,
-			Request: xrecorder.HTTPRequestRecorderObject{
-				ContentLength: r.ContentLength,
-				Header:        r.Header,
-			},
-		},
+		// HTTP: &xrecorder.HTTPRecorderObject{
+		// 	Host:   r.Host,
+		// 	Method: r.Method,
+		// 	Proto:  r.Proto,
+		// 	Scheme: r.URL.Scheme,
+		// 	URI:    r.RequestURI,
+		// 	Request: xrecorder.HTTPRequestRecorderObject{
+		// 		ContentLength: r.ContentLength,
+		// 		Header:        r.Header,
+		// 	},
+		// },
 		Time: start,
 	}
 
@@ -125,11 +125,11 @@ func (h *fileHandler) handleFunc(w http.ResponseWriter, r *http.Request) {
 
 	defer func() {
 		ro.Duration = time.Since(start)
-		ro.HTTP.StatusCode = rw.statusCode
-		ro.HTTP.Response = xrecorder.HTTPResponseRecorderObject{
-			ContentLength: rw.contentLength,
-			Header:        rw.Header(),
-		}
+		//ro.HTTP.StatusCode = rw.statusCode
+		// ro.HTTP.Response = xrecorder.HTTPResponseRecorderObject{
+		// 	ContentLength: rw.contentLength,
+		// 	Header:        rw.Header(),
+		// }
 		if err := ro.Record(context.Background(), h.recorder.Recorder); err != nil {
 			log.Errorf("record: %v", err)
 		}

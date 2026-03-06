@@ -218,17 +218,17 @@ func (ep *entrypoint) handleHTTP(ctx context.Context, conn net.Conn, ro *xrecord
 		log.Trace(string(dump))
 	}
 
-	ro.HTTP = &xrecorder.HTTPRecorderObject{
-		Host:   req.Host,
-		Proto:  req.Proto,
-		Scheme: req.URL.Scheme,
-		Method: req.Method,
-		URI:    req.RequestURI,
-		Request: xrecorder.HTTPRequestRecorderObject{
-			ContentLength: req.ContentLength,
-			Header:        req.Header.Clone(),
-		},
-	}
+	// ro.HTTP = &xrecorder.HTTPRecorderObject{
+	// 	Host:   req.Host,
+	// 	Proto:  req.Proto,
+	// 	Scheme: req.URL.Scheme,
+	// 	Method: req.Method,
+	// 	URI:    req.RequestURI,
+	// 	Request: xrecorder.HTTPRequestRecorderObject{
+	// 		ContentLength: req.ContentLength,
+	// 		Header:        req.Header.Clone(),
+	// 	},
+	// }
 
 	ro.Time = time.Time{}
 
@@ -307,17 +307,17 @@ func (ep *entrypoint) httpRoundTrip(ctx context.Context, rw io.ReadWriteCloser, 
 		req.URL.Host = req.Host
 	}
 
-	ro.HTTP = &xrecorder.HTTPRecorderObject{
-		Host:   req.Host,
-		Proto:  req.Proto,
-		Scheme: req.URL.Scheme,
-		Method: req.Method,
-		URI:    req.RequestURI,
-		Request: xrecorder.HTTPRequestRecorderObject{
-			ContentLength: req.ContentLength,
-			Header:        req.Header.Clone(),
-		},
-	}
+	// ro.HTTP = &xrecorder.HTTPRecorderObject{
+	// 	Host:   req.Host,
+	// 	Proto:  req.Proto,
+	// 	Scheme: req.URL.Scheme,
+	// 	Method: req.Method,
+	// 	URI:    req.RequestURI,
+	// 	Request: xrecorder.HTTPRequestRecorderObject{
+	// 		ContentLength: req.ContentLength,
+	// 		Header:        req.Header.Clone(),
+	// 	},
+	// }
 
 	res := &http.Response{
 		ProtoMajor: req.ProtoMajor,
@@ -325,7 +325,7 @@ func (ep *entrypoint) httpRoundTrip(ctx context.Context, rw io.ReadWriteCloser, 
 		Header:     http.Header{},
 		StatusCode: http.StatusServiceUnavailable,
 	}
-	ro.HTTP.StatusCode = res.StatusCode
+	// ro.HTTP.StatusCode = res.StatusCode
 
 	var reqBody *xhttp.Body
 	if opts := ep.recorder.Options; opts != nil && opts.HTTPBody {
@@ -352,24 +352,24 @@ func (ep *entrypoint) httpRoundTrip(ctx context.Context, rw io.ReadWriteCloser, 
 
 	resp, err := ep.transport.RoundTrip(req.WithContext(ctx))
 
-	if reqBody != nil {
-		ro.HTTP.Request.Body = reqBody.Content()
-		ro.HTTP.Request.ContentLength = reqBody.Length()
-	}
+	// if reqBody != nil {
+	// 	ro.HTTP.Request.Body = reqBody.Content()
+	// 	ro.HTTP.Request.ContentLength = reqBody.Length()
+	// }
 
 	if err != nil {
 		if errors.Is(err, ErrTunnelRoute) || errors.Is(err, ErrPrivateTunnel) {
 			res.StatusCode = http.StatusBadGateway
-			ro.HTTP.StatusCode = http.StatusBadGateway
+			// ro.HTTP.StatusCode = http.StatusBadGateway
 		}
 		res.Write(rw)
 		return
 	}
 	defer resp.Body.Close()
 
-	ro.HTTP.StatusCode = resp.StatusCode
-	ro.HTTP.Response.Header = resp.Header
-	ro.HTTP.Response.ContentLength = resp.ContentLength
+	// ro.HTTP.StatusCode = resp.StatusCode
+	// ro.HTTP.Response.Header = resp.Header
+	// ro.HTTP.Response.ContentLength = resp.ContentLength
 
 	if log.IsLevelEnabled(logger.TraceLevel) {
 		dump, _ := httputil.DumpResponse(resp, false)
@@ -395,10 +395,10 @@ func (ep *entrypoint) httpRoundTrip(ctx context.Context, rw io.ReadWriteCloser, 
 
 	err = resp.Write(rw)
 
-	if respBody != nil {
-		ro.HTTP.Response.Body = respBody.Content()
-		ro.HTTP.Response.ContentLength = respBody.Length()
-	}
+	// if respBody != nil {
+	// 	ro.HTTP.Response.Body = respBody.Content()
+	// 	ro.HTTP.Response.ContentLength = respBody.Length()
+	// }
 
 	if err != nil {
 		return fmt.Errorf("write response: %v", err)

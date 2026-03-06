@@ -255,21 +255,21 @@ func (h *httpHandler) handleRequest(ctx context.Context, conn net.Conn, req *htt
 		resp.Header = http.Header{}
 	}
 
-	ro.HTTP = &xrecorder.HTTPRecorderObject{
-		Host:   req.Host,
-		Proto:  req.Proto,
-		Scheme: req.URL.Scheme,
-		Method: req.Method,
-		URI:    req.RequestURI,
-		Request: xrecorder.HTTPRequestRecorderObject{
-			ContentLength: req.ContentLength,
-			Header:        req.Header.Clone(),
-		},
-	}
-	defer func() {
-		ro.HTTP.StatusCode = resp.StatusCode
-		ro.HTTP.Response.Header = resp.Header
-	}()
+	// ro.HTTP = &xrecorder.HTTPRecorderObject{
+	// 	Host:   req.Host,
+	// 	Proto:  req.Proto,
+	// 	Scheme: req.URL.Scheme,
+	// 	Method: req.Method,
+	// 	URI:    req.RequestURI,
+	// 	Request: xrecorder.HTTPRequestRecorderObject{
+	// 		ContentLength: req.ContentLength,
+	// 		Header:        req.Header.Clone(),
+	// 	},
+	// }
+	// defer func() {
+	// 	ro.HTTP.StatusCode = resp.StatusCode
+	// 	ro.HTTP.Response.Header = resp.Header
+	// }()
 
 	if req.Method == "PRI" ||
 		(req.Method != http.MethodConnect && req.URL.Scheme != "http") {
@@ -522,17 +522,17 @@ func (h *httpHandler) proxyRoundTrip(ctx context.Context, rw io.ReadWriteCloser,
 		}).Infof("%s >-< %s", ro.RemoteAddr, req.Host)
 	}()
 
-	ro.HTTP = &xrecorder.HTTPRecorderObject{
-		Host:   req.Host,
-		Proto:  req.Proto,
-		Scheme: req.URL.Scheme,
-		Method: req.Method,
-		URI:    req.RequestURI,
-		Request: xrecorder.HTTPRequestRecorderObject{
-			ContentLength: req.ContentLength,
-			Header:        req.Header.Clone(),
-		},
-	}
+	// ro.HTTP = &xrecorder.HTTPRecorderObject{
+	// 	Host:   req.Host,
+	// 	Proto:  req.Proto,
+	// 	Scheme: req.URL.Scheme,
+	// 	Method: req.Method,
+	// 	URI:    req.RequestURI,
+	// 	Request: xrecorder.HTTPRequestRecorderObject{
+	// 		ContentLength: req.ContentLength,
+	// 		Header:        req.Header.Clone(),
+	// 	},
+	// }
 
 	// HTTP/1.0
 	http10 := req.ProtoMajor == 1 && req.ProtoMinor == 0
@@ -555,7 +555,7 @@ func (h *httpHandler) proxyRoundTrip(ctx context.Context, rw io.ReadWriteCloser,
 		Header:     http.Header{},
 		StatusCode: http.StatusServiceUnavailable,
 	}
-	ro.HTTP.StatusCode = res.StatusCode
+	//ro.HTTP.StatusCode = res.StatusCode
 
 	if h.options.Bypass != nil &&
 		h.options.Bypass.Contains(ctx, "tcp", host, bypass.WithService(h.options.Service)) {
@@ -591,10 +591,10 @@ func (h *httpHandler) proxyRoundTrip(ctx context.Context, rw io.ReadWriteCloser,
 
 	resp, err := h.transport.RoundTrip(req.WithContext(ctx))
 
-	if reqBody != nil {
-		ro.HTTP.Request.Body = reqBody.Content()
-		ro.HTTP.Request.ContentLength = reqBody.Length()
-	}
+	// if reqBody != nil {
+	// 	ro.HTTP.Request.Body = reqBody.Content()
+	// 	ro.HTTP.Request.ContentLength = reqBody.Length()
+	// }
 
 	if err != nil {
 		res.Write(rw)
@@ -602,9 +602,9 @@ func (h *httpHandler) proxyRoundTrip(ctx context.Context, rw io.ReadWriteCloser,
 	}
 	defer resp.Body.Close()
 
-	ro.HTTP.StatusCode = resp.StatusCode
-	ro.HTTP.Response.Header = resp.Header.Clone()
-	ro.HTTP.Response.ContentLength = resp.ContentLength
+	// ro.HTTP.StatusCode = resp.StatusCode
+	// ro.HTTP.Response.Header = resp.Header.Clone()
+	// ro.HTTP.Response.ContentLength = resp.ContentLength
 
 	if log.IsLevelEnabled(logger.TraceLevel) {
 		dump, _ := httputil.DumpResponse(resp, false)
@@ -640,10 +640,10 @@ func (h *httpHandler) proxyRoundTrip(ctx context.Context, rw io.ReadWriteCloser,
 
 	err = resp.Write(rw)
 
-	if respBody != nil {
-		ro.HTTP.Response.Body = respBody.Content()
-		ro.HTTP.Response.ContentLength = respBody.Length()
-	}
+	// if respBody != nil {
+	// 	ro.HTTP.Response.Body = respBody.Content()
+	// 	ro.HTTP.Response.ContentLength = respBody.Length()
+	// }
 
 	if err != nil {
 		err = fmt.Errorf("write response: %v", err)
