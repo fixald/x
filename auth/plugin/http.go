@@ -56,7 +56,7 @@ func NewHTTPPlugin(name string, url string, opts ...plugin.Option) auth.Authenti
 
 func (p *httpPlugin) Authenticate(ctx context.Context, user, password string, opts ...auth.Option) (id string, ok bool) {
 	if p.client == nil {
-		return
+		return "", false
 	}
 
 	var options auth.Options
@@ -80,9 +80,13 @@ func (p *httpPlugin) Authenticate(ctx context.Context, user, password string, op
 	p.passMu.RLock()
 	PasswordId, ok := p.passMap[rb.Username+"|"+tmpIp]
 	p.passMu.RUnlock()
-	p.log.Infof("key: %s,PasswordId: %s", rb.Username+"|"+tmpIp, PasswordId)
 	parts := strings.SplitN(PasswordId, ":|:", 2)
-	if ok && len(parts) == 2 && parts[0] == password {
+	part0 := ""
+	if len(parts) > 0 {
+		part0 = parts[0]
+	}
+	match := ok && len(parts) == 2 && part0 == password
+	if match {
 		return parts[1], ok
 	}
 	// ok is false
@@ -90,12 +94,12 @@ func (p *httpPlugin) Authenticate(ctx context.Context, user, password string, op
 
 	v, err := json.Marshal(&rb)
 	if err != nil {
-		return
+		return "", false
 	}
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, p.url, bytes.NewReader(v))
 	if err != nil {
-		return
+		return "", false
 	}
 
 	if p.header != nil {
@@ -104,17 +108,20 @@ func (p *httpPlugin) Authenticate(ctx context.Context, user, password string, op
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := p.client.Do(req)
 	if err != nil {
-		return
+		return "", false
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return
+		return "", false
 	}
 
 	res := httpPluginResponse{}
 	if err := json.NewDecoder(resp.Body).Decode(&res); err != nil {
-		return
+		return "", false
+	}
+	if !res.OK {
+		return "", false
 	}
 
 	p.passMu.Lock()

@@ -285,7 +285,15 @@ func (h *httpHandler) handleRequest(ctx context.Context, conn net.Conn, req *htt
 
 	clientID, ok := h.authenticate(ctx, conn, req, resp, log)
 	if !ok {
-		return errors.New("authentication failed")
+		// 在认证失败时
+		resp := &http.Response{
+			StatusCode: http.StatusProxyAuthRequired,
+			ProtoMajor: 1,
+			ProtoMinor: 1,
+			Body:       io.NopCloser(strings.NewReader("Account or password authentication failed\r\n")),
+		}
+		resp.Write(conn)
+		return errors.New("Account or password authentication failed")
 	}
 	// 无 auther 时可能得到空 clientID，用 context（admission 设置的 ID）或来源地址兜底，保证 observer 有 client 字段
 	if clientID == "" {

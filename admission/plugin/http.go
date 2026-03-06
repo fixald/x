@@ -57,7 +57,7 @@ func NewHTTPPlugin(name string, url string, opts ...plugin.Option) admission.Adm
 
 func (p *httpPlugin) Admit(ctx context.Context, addr string, opts ...admission.Option) (ok bool) {
 	if p.client == nil {
-		return
+		return false
 	}
 
 	var options admission.Options
@@ -83,12 +83,12 @@ func (p *httpPlugin) Admit(ctx context.Context, addr string, opts ...admission.O
 
 	v, err := json.Marshal(&rb)
 	if err != nil {
-		return
+		return false
 	}
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, p.url, bytes.NewReader(v))
 	if err != nil {
-		return
+		return false
 	}
 
 	if p.header != nil {
@@ -97,19 +97,22 @@ func (p *httpPlugin) Admit(ctx context.Context, addr string, opts ...admission.O
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := p.client.Do(req)
 	if err != nil {
-		return
+		return false
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return
+		return false
 	}
 
 	res := httpPluginResponse{}
 	if err := json.NewDecoder(resp.Body).Decode(&res); err != nil {
-		return
+		return false
 	}
-
+	p.log.Infof("res: %+v,OK: %v", res, res.OK)
+	if !res.OK {
+		return false
+	}
 	p.passMu.Lock()
 	p.passMap[tIp] = res.OK
 	// 存储返回的 ID（优先使用小写 id，如果没有则使用大写 ID）
